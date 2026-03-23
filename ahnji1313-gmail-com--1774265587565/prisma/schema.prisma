@@ -1,0 +1,74 @@
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+}
+
+model User {
+  id       String   @id @default(cuid())
+  email    String   @unique
+  password String
+  name     String?
+  role     Role     @default(AUTHOR)
+  posts    Post[]
+  comments Comment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map(name: "users")
+}
+
+enum Role {
+  AUTHOR
+  ADMIN
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  comments  Comment[]
+  published Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@map(name: "posts")
+  @@index([title], name: "titleIdx")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  text      String
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  post      Post     @relation(fields: [postId], references: [id])
+  postId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@map(name: "comments")
+}
+
+model News {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  published Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@map(name: "news")
+  @@index([title], name: "titleIdx")
+}
+```

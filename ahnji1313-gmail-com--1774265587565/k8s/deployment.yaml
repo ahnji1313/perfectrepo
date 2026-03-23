@@ -1,0 +1,254 @@
+Here's a basic DevOps setup for a multi-stage Docker application using a Dockerfile, docker-compose, K8s manifests, and Helm values. 
+
+### Dockerfile (multi-stage)
+
+```dockerfile
+# Stage 1: Build
+FROM golang:alpine AS build
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+
+# Stage 2: Production
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /app
+
+COPY --from=build /app/main .
+
+EXPOSE 8080
+
+CMD ["./main"]
+```
+
+### Docker Compose (dev and prod)
+
+`docker-compose.yml`
+
+```yaml
+version: '3'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - "RUST_LOG=info"
+    environment_dev:
+      - "RUST_LOG=debug"
+      - "RUST_BACKTRACE=1"
+    depends_on:
+      - database
+    restart: always
+
+  database:
+    image: mariadb:latest
+    environment:
+      - "MYSQL_ROOT_PASSWORD=password"
+      - "MYSQL_DATABASE=database"
+      - "MYSQL_USER=user"
+      - "MYSQL_PASSWORD=password"
+    volumes:
+      - db-data:/var/lib/mysql
+    restart: always
+
+volumes:
+  db-data:
+```
+
+`docker-compose-dev.yml`
+
+```yaml
+version: '3'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - "RUST_LOG=debug"
+      - "RUST_BACKTRACE=1"
+    environment_dev:
+      - "RUST_LOG=debug"
+      - "RUST_BACKTRACE=1"
+    depends_on:
+      - database
+    restart: always
+
+  database:
+    image: mariadb:latest
+    environment:
+      - "MYSQL_ROOT_PASSWORD=password"
+      - "MYSQL_DATABASE=database"
+      - "MYSQL_USER=user"
+      - "MYSQL_PASSWORD=password"
+    volumes:
+      - db-data:/var/lib/mysql
+    restart: always
+
+volumes:
+  db-data:
+```
+
+### Kubernetes Manifests
+
+`deployment.yaml`
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: app
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      containers:
+      - name: app
+        image: <your-docker-image-url>
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+```
+
+`service.yaml`
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-service
+spec:
+  selector:
+    app: app
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  type: LoadBalancer
+```
+
+`ingress.yaml`
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+spec:
+  rules:
+  - host: <your-app-url>
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: app-service
+            port:
+              number: 80
+```
+
+`horizontal-pod-autoscaler.yaml`
+
+```yaml
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: app-autoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: app-deployment
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+```
+
+### Helm Values
+
+`values.yaml`
+
+```yaml
+replicaCount: 3
+
+image:
+  repository: <your-docker-image-url>
+  tag: latest
+  pullPolicy: IfNotPresent
+
+database:
+  enabled: true
+  image:
+    repository: mariadb
+    tag: latest
+  environment:
+    MYSQL_ROOT_PASSWORD: password
+    MYSQL_DATABASE: database
+    MYSQL_USER: user
+    MYSQL_PASSWORD: password
+  persistence:
+    enabled: true
+    size: 1Gi
+```
+
+### Helm Chart
+
+`Chart.yaml`
+
+```yaml
+name: app-chart
+version: 1.0.0
+```
+
+`requirements.yaml`
+
+```yaml
+dependencies:
+  - name: mariadb
+    version: ^1.0.0
+    repository: https://charts.bitnami.com/bitnami
+```
+
+`templates/deployment.yaml` (same as above)
+
+`templates/service.yaml` (same as above)
+
+`templates/ingress.yaml` (same as above)
+
+`templates/horizontal-pod-autoscaler.yaml` (same as above)
+
+This setup provides a basic DevOps pipeline for building, deploying, and scaling a Docker application using Kubernetes and Helm. You can customize and extend this setup as per your specific requirements.

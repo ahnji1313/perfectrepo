@@ -1,0 +1,149 @@
+**manifest.json**
+```json
+{
+  "short_name": "App Name",
+  "name": "App Name",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "description": "App Description",
+  "theme_color": "#000000",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "gcm_sender_id": "1234567890"
+}
+```
+
+**service-worker.js**
+```javascript
+import { registerSW } from 'register-sw';
+
+registerSW({
+  // offline
+  async onOffline() {
+    console.log('Offline');
+    // offline logic
+  },
+  // online
+  async onOnline() {
+    console.log('Online');
+    // online logic
+  },
+  // push notifications
+  async onPushNotification(data) {
+    console.log('Push Notification', data);
+    // push notification logic
+  },
+  // install prompt
+  async onInstallPrompt(prompt) {
+    if ('serviceWorker' in navigator) {
+      prompt.prompt();
+      prompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+        } else {
+          console.log('User declined the install prompt');
+        }
+      });
+    }
+  },
+  // handle errors
+  async onError(error) {
+    console.log('Error:', error);
+  },
+});
+```
+
+**Responsive Breakpoints**
+```css
+/* desktop */
+@media only screen and (min-width: 1200px) {
+  /* styles */
+}
+
+/* tablet */
+@media only screen and (min-width: 768px) and (max-width: 1199px) {
+  /* styles */
+}
+
+/* mobile */
+@media only screen and (max-width: 767px) {
+  /* styles */
+}
+
+/* portrait mobile */
+@media only screen and (max-width: 479px) {
+  /* styles */
+}
+
+/* landscape mobile */
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+  /* styles */
+}
+```
+
+**Touch Gestures**
+```javascript
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+// import Touchable from 'react-native-touchable';
+
+const App = () => {
+  return (
+    <GestureHandlerRootView>
+      {/* your components */}
+    </GestureHandlerRootView>
+  );
+};
+
+export default App;
+```
+
+**PWA Installation Prompt**
+```javascript
+import { useEffect } from 'react';
+import { useWindowFocus } from 'react-window-focus';
+
+const App = () => {
+  const { focus, blur, isFocused } = useWindowFocus();
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js');
+      navigator.serviceWorker.addEventListener('controllerchange', (e) => {
+        window.location.reload();
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isFocused) {
+      focus();
+    } else {
+      blur();
+    }
+  }, [isFocused]);
+
+  return (
+    <div>
+      {/* your components */}
+    </div>
+  );
+};
+
+export default App;
+```
+
+Note: The above code snippets are examples and may require additional setup and configuration to work in your specific project.

@@ -1,0 +1,162 @@
+**Prometheus Configuration**
+```yml
+# /etc/prometheus/prometheus.yml
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']
+
+  - job_name: 'service'
+    static_configs:
+      - targets: ['service1:9101', 'service2:9102']
+
+rule_files:
+  - '/etc/prometheus/rules/*.yml'
+```
+
+**Grafana Dashboard JSON**
+```json
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "name": "Range",
+        "type": "datasource"
+      }
+    ]
+  },
+  "editable": true,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "span": 12,
+      "title": "Service1 Response Time",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": 'avg(service1_response_time{job="service1"})',
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "id": 2,
+      "panelId": 1,
+      "span": 12,
+      "title": "Service2 Response Time",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": 'avg(service2_response_time{job="service2"})',
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "style": "dark",
+  "tags": [],
+  "version": 1
+}
+```
+
+**AlertManager Rules**
+```yml
+# /etc/alertmanager/alertmanager.yml
+
+route:
+  receiver: 'default-receiver'
+  group_by: ['job']
+
+receivers:
+  - name: 'default-receiver'
+    email_configs:
+      - to: 'watch@domain.com'
+        send_resolved: true
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+```
+
+**SLO/SLI Definitions**
+```yml
+# /etc/slo/slo.yml
+
+slo:
+  name: 'Service1 Response Time'
+  target: 0.99
+  evaluation_interval: 1h
+  time_window: 1h
+
+service1_response_time:
+  name: 'Service1 Response Time'
+  target: 0.99
+  evaluation_interval: 1h
+  time_window: 1h
+```
+
+**Runbook**
+```markdown
+# Service 1 Response Time Runbook
+
+## Step 1: Identify the issue
+
+* Check the Grafana dashboard for Service 1 Response Time metrics
+* Check the Prometheus console for any alerts
+
+## Step 2: Troubleshoot the issue
+
+* Check the Service 1 logs for any errors
+* Check the Service 1 configuration for any issues
+
+## Step 3: Resolve the issue
+
+* Fix the issue in Service 1
+* Update the Service 1 configuration
+* Restart the Service 1 service
+```
+
+**Prometheus Alerting Rules**
+```yml
+# /etc/prometheus/rules/alerting_rules.yml
+
+groups:
+  - name: 'Service1 Response Time'
+    rules:
+      - alert: 'Service1 Response Time High'
+        expr: 'service1_response_time > 0.999'
+        for: 5m
+        labels:
+          severity: 'critical'
+        annotations:
+          description: 'Service 1 response time is high'
+          summary: 'Service 1 response time is high'
+```
+
+This is a basic example of monitoring configuration using Prometheus, Grafana, AlertManager, SLO/SLI definitions, and a runbook. The Prometheus configuration includes scrape intervals, evaluation intervals, and rule files. The Grafana dashboard JSON includes a graph panel for Service 1 response time and a link to the Prometheus console. The AlertManager rules include a receiver and an email configuration. The SLO/SLI definitions include a Service 1 response time SLO with a target of 0.99 and an evaluation interval of 1 hour. The runbook includes steps to identify, troubleshoot, and resolve issues with Service 1 response time. The Prometheus alerting rules include a rule for Service 1 response time high with a severity of critical.
